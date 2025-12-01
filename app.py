@@ -10,8 +10,13 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 st.title("🐧 Projekt: Klasyfikacja pingwinów")
+st.subheader("Zadanie 3")
+st.write("###### `Przedmiot:` Sieci Neuronowe i Uczenie Głębokie")
+st.write("###### `Prowadzący:` prof. Jerzy Duda")
+st.write("###### `Autor:` Zuzanna Deszcz")
+st.divider()
 
-# === Krok 1: Ładowanie danych ===
+# Ładowanie danych
 st.header("1. Ładowanie danych")
 st.markdown("""
 Wczytywanie danych z pliku 
@@ -31,7 +36,7 @@ except Exception as e:
 
 
 
-# === Krok 2: Podstawowe informacje ===
+# Podstawowe informacje
 st.header("2. Eksploracja danych")
 st.markdown("""
 Sprawdzono
@@ -63,7 +68,7 @@ st.write(f"🔢 Liczbowe: {numeric_cols}")
 st.write(f"🔤 Kategoryczne: {categorical_cols}")
 
 
-# === Krok 3: Wizualizacja ===
+# === Wizualizacja (krok 3) ===
 # Słownik. nazwa wyświetlana → nazwa kolumny w danych
 DISPLAY_TO_COLUMN = {
     "dług. dzioba (mm)": "bill_length_mm",
@@ -80,7 +85,7 @@ st.markdown("""
 Wybierz parę cech, by zobaczyć, czy gatunki tworzą naturalne „grupy”.
 """)
 
-# Usuwamy tylko braki w kluczowych kolumnach (dla wykresu)
+# Usuwanie brakow
 plot_df = penguins.dropna(subset=list(DISPLAY_TO_COLUMN.values()))
 
 x_label = st.selectbox("Oś X", list(DISPLAY_TO_COLUMN.keys()), index=2)  # domyślnie: dług. płetwy
@@ -90,7 +95,7 @@ y_label = st.selectbox("Oś Y", list(DISPLAY_TO_COLUMN.keys()), index=0)  # domy
 x_col = DISPLAY_TO_COLUMN[x_label]
 y_col = DISPLAY_TO_COLUMN[y_label]
 
-# Sprawdź, czy nie wybrano tej samej osi dwa razy
+# Nie pozwala na wybranie tej samej osi dwa razy
 if x_col == y_col:
     st.warning("⚠️ Oś X i Y nie mogą być tą samą cechą.")
 else:
@@ -111,7 +116,7 @@ else:
 
 
 
-# === Krok 4: Kodowanie kategoryczne ===
+# === Kodowanie kategoryczne ===
 st.header("4. Przekształcanie zmiennych kategorycznych")
 st.markdown("""
 Zmienne kategoryczne (`island`, `sex`) zostały przekształcone metodą kodowania typu **one-hot**, w której każda kategoria reprezentowana jest przez oddzielną binarną zmienną. W celu ograniczenia multikolinearności zastosowano opcję drop='first', usuwając jedną kategorię odniesienia dla każdej zmiennej. Każda kategoria staje się osobną kolumną (0/1).
@@ -125,7 +130,7 @@ st.dataframe(encoded)
 
 
 
-# === Krok 5: Imputacja braków ===
+# === Imputacja braków ===
 st.header("5. Obsługa brakujących wartości")
 st.markdown("""            
 Brakujące wartości uzupełniono, stosując **imputację**.
@@ -139,7 +144,7 @@ st.dataframe(penguins[penguins.isnull().any(axis=1)].head(3))
 st.write("Procedura została wykonana w pipelinie, co zapewnia brak wycieku danych.")
 
 
-# 6. Przygotowanie X, y i podział ===
+# 6. Przygotowanie X, y i podział
 st.header("6–7. Przygotowanie danych do modelu")
 
 st.markdown("""
@@ -220,10 +225,6 @@ else:
         X_train_processed = preprocessor.fit_transform(X_train)
         X_test_processed = preprocessor.transform(X_test)
 
-        # Skalujemy — ale tylko dla modeli wymagających skalowania (LogReg, NN)
-        # W pipeline LogReg jest już scaler, ale dla NN chcemy mieć czyste X_scaled
-        # → więc wyciągamy tylko numeryczne cechy z pipeline i skalujemy je osobno?
-        # ✅ Lepsze rozwiązanie: zmodyfikuj pipeline tak, by dało się uzyskać X_scaled
     except Exception as e:
         st.error(f"Błąd preprocessingu: {e}")
         st.stop()
@@ -318,14 +319,8 @@ else:
         st.session_state.pop('model_2', None)
         st.rerun()
 
-
-
-
-
 st.header("10. Skalowanie zmiennych")
 st.info(f"✅ Skalowanie (`StandardScaler`) zostało zastosowane w pipeline dla regresji logistycznej.")
-
-
 
 
 
@@ -333,7 +328,7 @@ st.info(f"✅ Skalowanie (`StandardScaler`) zostało zastosowane w pipeline dla 
 # === TENSORFLOW ===
 
 
-st.header("11. Sieć neuronowa (Keras/TensorFlow)")
+st.header("11-12. Sieć neuronowa")
 
 st.markdown("""
 Zbudowano *feedforward* sieć neuronową:
@@ -387,16 +382,16 @@ if 'X_train_processed' not in st.session_state:
 
     st.info("✅ Dane przetworzone i zapisane do sesji.")
 
-# !!!!! Sprawdź, czy model już istnieje i można go wczytać
-if 'nn_model' not in st.session_state:
-    model_path = "saved_models/penguin_nn.keras"
-    if os.path.exists(model_path):
-        try:
-            st.session_state['nn_model'] = tf.keras.models.load_model(model_path)
-            st.session_state['nn_loaded'] = True  # flaga — wczytany z pliku
-            st.success("🧠 Załadowano zapisany model sieci neuronowej.")
-        except Exception as e:
-            st.warning(f"⚠️ Nie udało się wczytać modelu: {e}")
+    # 🔁 Automatyczne ładowanie modelu — tylko raz na starcie (przed przyciskami!)
+    if 'nn_model' not in st.session_state:
+        model_path = "saved_models/penguin_nn.keras"
+        if os.path.exists(model_path):
+            try:
+                st.session_state['nn_model'] = tf.keras.models.load_model(model_path)
+                st.session_state['nn_history'] = None  # historia nie jest zapisana w .keras
+                st.success(f"🧠 Załadowano zapisany model z `{model_path}`.")
+            except Exception as e:
+                st.warning(f"⚠️ Nie udało się wczytać modelu: {e}")
 
 # 🔘 Trenowanie NN — tylko po naciśnięciu
 if st.button("Wytrenuj sieć neuronową"):
@@ -422,7 +417,7 @@ if st.button("Wytrenuj sieć neuronową"):
         monitor='val_loss', patience=10, restore_best_weights=True, verbose=0
     )
 
-    with st.spinner("🧠 Trenowanie sieci neuronowej (może zająć 5–10 sekund)..."):
+    with st.spinner("🧠 Trenowanie sieci neuronowej (może zająć 20-30 sekund)..."):
         history = model.fit(
             X_train_processed, y_train,
             epochs=100,
@@ -477,18 +472,62 @@ if st.button("Wytrenuj sieć neuronową"):
     Brak rosnącego `val_loss` wskazuje na brak overfittingu.
     """)
 
-    # !!!!! Zapisz model lokalnie
-    os.makedirs("saved_models", exist_ok=True)
-    model_save_path = "saved_models/penguin_nn.keras"
-    try:
-        # logi
-        st.write("🔍 Próbuję zapisać model…")
-        os.makedirs("saved_models", exist_ok=True)
-        model_save_path = "saved_models/penguin_nn.keras"
-        st.write(f"Ścieżka zapisu: {os.path.abspath(model_save_path)}")
+    # Krok 12. metryki
+    from sklearn.metrics import classification_report, f1_score, precision_recall_fscore_support
+    import numpy as np
 
-        model.save(model_save_path)
-        st.success(f"💾 Model zapisany lokalnie: `{model_save_path}`")
+    y_pred_proba = model.predict(X_test_processed)
+    y_pred_classes = np.argmax(y_pred_proba, axis=1)
+
+    # --- do accuracy dodane F1 ---
+    f1_macro = f1_score(y_test, y_pred_classes, average='macro')
+    f1_weighted = f1_score(y_test, y_pred_classes, average='weighted')
+
+    st.subheader("Raport klasyfikacji")
+
+    col1, col2 = st.columns(2)
+    col1.metric("F1-score (macro)", f"{f1_macro:.3f}")
+    col2.metric("F1-score (weighted)", f"{f1_weighted:.3f}")
+
+    # --- Per-class precision, recall, f1 ---
+    prec, rec, f1, sup = precision_recall_fscore_support(
+        y_test, y_pred_classes,
+        labels=[0, 1, 2],
+        zero_division=0
+    )
+
+    metrics_df = pd.DataFrame({
+        'Gatunek': le.classes_,
+        'Precision': prec,
+        'Recall': rec,
+        'F1-score': f1,
+        'Support': sup.astype(int)
+    }).round(3)
+
+    st.write("**Szczegółowe metryki per class:**")
+    st.dataframe(metrics_df)
+
+    # pełny raport klasyfikacji
+    try:
+        report = classification_report(
+            y_test,
+            y_pred_classes,
+            labels=[0, 1, 2],
+            target_names=le.classes_,
+            zero_division=0
+        )
+        # Accuracy i średnie osobno
+        accuracy_val = accuracy_score(y_test, y_pred_classes)
+        macro_f1 = f1_score(y_test, y_pred_classes, average='macro')
+        weighted_f1 = f1_score(y_test, y_pred_classes, average='weighted')
+
+        summary_df = pd.DataFrame({
+            'Metryka': ['Accuracy', 'Macro F1', 'Weighted F1'],
+            'Wartość': [f"{accuracy_val:.3f}", f"{macro_f1:.3f}", f"{weighted_f1:.3f}"]
+        })
+
+        st.write("**Podsumowanie globalne:**")
+        st.dataframe(summary_df, use_container_width=True, hide_index=True)
+
     except Exception as e:
-        st.error(f"❌ Błąd zapisu modelu: {e}")
-    
+        st.error(f"Błąd raportu: {e}")
